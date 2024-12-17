@@ -1,0 +1,4 @@
+repository "Jame Gam Christmas Edition@Narry_125@cloud"
+  path "/"
+    br "/main"
+    co "/main"
