@@ -1,16 +1,25 @@
+using System;
+using Narry;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    [SerializeField] private InputReader _input;
+    [SerializeField] private GameObject pauseMenu;
     void Start()
     {
-        
+        _input.PauseEvent += HandlePause;
+        _input.ResumeEvent += HandleResume;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void HandlePause()
     {
-        
+        pauseMenu.SetActive(true);
     }
+
+    private void HandleResume()
+    {
+        pauseMenu.SetActive(false);
+    }
+    
 }
