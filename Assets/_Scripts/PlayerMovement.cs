@@ -1,5 +1,6 @@
 using System;
 using Narry;
+using Unity.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -9,15 +10,21 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private InputReader _input;
 
     [SerializeField] private Rigidbody _playerRB;
-    [SerializeField] private float _turnSpeed = 10f; 
-    [SerializeField] private float _maxTurnAngle = 30f;  
-    [SerializeField] private float _speed;  
+    [SerializeField] private float _speed;
     
-    [SerializeField] private LayerMask _groundLayer;
-    private Vector3 _moveDirection = Vector3.zero;
+    public float acceleration = 0.5f;    // Прискорення
+    public float deceleration = 0.3f;
+    public float maxSpeed = 30f; 
+    public float turnSpeed = 200f;     // Speed of turning
+    public float maxRotationAngle = 30f;
+    public float groundCheckDistance = 1.5f;
+    
+    [SerializeField, ReadOnly] private float _currentSpeed = 0f;
+    private float currentRotationY = 0f;
 
-    private float currentRotation = 0f; 
-    private float turnInput = 0f;
+    private Vector3 moveDirection; 
+    
+    private float _turnInput = 0f;
 
     private void Start()
     {
@@ -27,32 +34,45 @@ public class PlayerMovement : MonoBehaviour
 
     public void  SetTurnInput(Vector2 moveInput)
     {
-        turnInput = moveInput.x;
+        _turnInput = moveInput.x;
     }
 
     private void Update()
-    {// Обчислюємо кут повороту, обмежений maxTurnAngle
-        float turnAmount = (turnInput * -1 )* _turnSpeed * Time.deltaTime;
-
-        // Отримуємо поточний кут повороту по осі Y
-        float currentRotationY = transform.eulerAngles.y;
-
-        // Додаємо кут повороту до поточного кута
-        float newRotationY = currentRotationY + turnAmount;
-
-        // Обмежуємо кут повороту на 30 градусів в обидва боки
-        if (newRotationY > 180) newRotationY -= 360; // Коригуємо для негативних значень
-        newRotationY = Mathf.Clamp(newRotationY, -_maxTurnAngle, _maxTurnAngle);
-
-        // Повертаємо сани тільки по осі Y
-        transform.eulerAngles = new Vector3(transform.eulerAngles.x, newRotationY, transform.eulerAngles.z);
-    }
-
-    void FixedUpdate()
     {
-        // Рух санок вниз по схилу (незалежно від інпуту)
-        Vector3 forwardMovement = transform.forward * (_speed * Time.fixedDeltaTime);
-        _playerRB.MovePosition(_playerRB.position + forwardMovement);
+        float rotationDelta = _turnInput * turnSpeed * Time.fixedDeltaTime;
+
+        currentRotationY = Mathf.Clamp(currentRotationY + rotationDelta, -maxRotationAngle, maxRotationAngle);
+
+        // Встановлюємо обмежений кут на об'єкт
+        transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, currentRotationY, transform.localEulerAngles.z);
+
+        // Оновлюємо швидкість об'єкта
+        UpdateSpeed();
+        MoveObject();
     }
+
+    private void MoveObject()
+    {
+        Vector3 moveDirection = transform.forward * _currentSpeed * Time.fixedDeltaTime;
+        transform.position += moveDirection;
+    }
+
+    private void UpdateSpeed()
+    {
+        RaycastHit hit;
+
+        // Виконуємо Raycast вниз для перевірки поверхні
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, groundCheckDistance))
+        {
+            // Якщо об'єкт на землі, прискорюємо його
+            _currentSpeed = Mathf.Min(_currentSpeed + acceleration * Time.fixedDeltaTime, maxSpeed);
+        }
+        else
+        {
+            // Якщо об'єкт у повітрі або сповільнюється, зменшуємо швидкість
+            _currentSpeed = Mathf.Max(_currentSpeed - deceleration * Time.fixedDeltaTime, 0f);
+        }
+    }
+
     
 }
